@@ -74,7 +74,7 @@ curl -O https://raw.githubusercontent.com/ausrine-labs/claimcheck/main/claimchec
 python3 claimcheck.py "committed as a1b2c3d and pushed to main"
 ```
 
-`python3 test_claimcheck.py` runs 19 checks, split between lies that must
+`python3 test_claimcheck.py` runs 22 checks, split between lies that must
 be caught and quotations that must not be.
 
 ## Why it exists

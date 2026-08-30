@@ -64,6 +64,30 @@ check("bare push", branches("pushed everything up"), [None])
 check("stopword", branches("pushed to it"), [None])
 check("semicolon", branches("pushed; tree clean"), [None])
 
+print("\n-- a bare push claim asks the right question --")
+import os, shutil, subprocess, tempfile
+_tmp = tempfile.mkdtemp()
+_r = os.path.join(_tmp, "work")
+os.makedirs(_r)
+_run = lambda c, d=None: subprocess.run(c, shell=True, cwd=d or _r, capture_output=True)
+_run("git init -q -b main && git config user.email a@b && git config user.name a")
+open(os.path.join(_r, "f"), "w").write("1")
+_run("git add -A && git commit -qm one")
+check("no remote at all = FALSE", cc.check_push(None, _r)[0], cc.FALSE)
+
+_run("git init -q --bare " + os.path.join(_tmp, "origin.git"), _tmp)
+_run("git remote add origin " + os.path.join(_tmp, "origin.git"))
+_run("git push -q origin main")
+check("pushed to origin = verified", cc.check_push(None, _r)[0], cc.TRUE)
+
+# the bug this replaced: work on a SIDE branch is still safely on origin,
+# even though the checked-out branch reads as ahead of its upstream.
+_run("git checkout -q -b side && git commit -q --allow-empty -m two")
+_run("git push -q origin side")
+_run("git checkout -q main && git merge -q --ff-only side")
+check("side-branch push counts as pushed", cc.check_push(None, _r)[0], cc.TRUE)
+shutil.rmtree(_tmp, ignore_errors=True)
+
 print("\n-- offsets survive masking (a mask must not shift the text) --")
 src = 'a "quoted bit" and *an italic bit* end'
 check("length held", len(cc.mask_mentions(src)), len(src))

@@ -118,14 +118,16 @@ def find_pushes(text):
 
 def check_push(branch, repo):
     if branch is None:
-        code, out, _ = sh("git status -sb | head -1", cwd=repo)
-        if "ahead" in out:
-            n = re.search(r"ahead (\d+)", out)
-            return FALSE, "local is ahead of origin by %s commit(s) — not pushed" % (
-                n.group(1) if n else "?")
-        if code == 0 and out:
-            return TRUE, "local branch is not ahead of origin"
-        return UNPROVEN, "no branch named and cannot read git status"
+        # "ahead of upstream" is the wrong question. Work pushed to a side
+        # branch is safe on origin while the local branch still reads ahead.
+        # The real question is whether ANY remote has seen these commits.
+        code, out, _ = sh("git log HEAD --not --remotes=origin --format=%H", cwd=repo)
+        if code != 0:
+            return UNPROVEN, "no branch named and cannot read git history"
+        stranded = [l for l in out.splitlines() if l.strip()]
+        if stranded:
+            return FALSE, "%d commit(s) exist on no remote — not pushed" % len(stranded)
+        return TRUE, "every commit here is on origin (some branch)"
     code, out, err = sh("git ls-remote --heads origin %s" % branch, cwd=repo)
     if code != 0:
         return UNPROVEN, "cannot reach remote (%s)" % (err[:60] or "no origin")
