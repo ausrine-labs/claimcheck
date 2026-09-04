@@ -24,25 +24,27 @@ $ claimcheck.py --file handoff.md
 This report contains a false claim. Do not act on it.
 ```
 
-Exit 0 when everything checks out, 1 when it doesn't. Drop it in a hook
-and a false report stops the line instead of travelling.
+Exit 0 when nothing is false, 1 when a claim is false. A check that
+cannot reach the evidence reports `BLIND` rather than guessing. Drop it
+in a hook and a false report stops the line instead of travelling.
 
 ## What it verifies
 
 | Claim | Check |
 |---|---|
-| committed as `<sha>` | `git cat-file` — the object exists, and its subject is shown |
+| committed as `<sha>` | local Git, remote branch tips, and sibling checkouts, without fetching |
 | pushed to `<branch>` | `git ls-remote` against origin; a bare "pushed" checks whether local is ahead |
 | tree is clean | `git status --porcelain` |
 | tests pass | runs the test command and reports the exit code |
 | created `<path>` | the path exists, with its size |
 | PR #N merged | `gh pr view` — the actual state |
-| any URL | HTTP status |
+| any URL | HTTP status; a refused or blocked request is blind, not false |
 
-Three verdicts: **verified**, **FALSE**, **unproven**. The third one is
-the point — a claim it could not check is never quietly counted as true.
-A report with no checkable claims at all exits 1, because an
-unverifiable report is not a verified one.
+Four verdicts: **verified**, **FALSE**, **unproven**, and
+**UNVERIFIABLE** (shown as `BLIND`). Unproven means the tool found no
+check it knows how to run. BLIND means it found a specific claim but
+could not reach enough evidence to judge it. Neither is silently counted
+as true, and BLIND is never mislabeled as a lie.
 
 ## Quoting a claim is not making one
 
@@ -74,8 +76,9 @@ curl -O https://raw.githubusercontent.com/ausrine-labs/claimcheck/main/claimchec
 python3 claimcheck.py "committed as a1b2c3d and pushed to main"
 ```
 
-`python3 test_claimcheck.py` runs 22 checks, split between lies that must
-be caught and quotations that must not be.
+`python3 test_claimcheck.py` runs the deterministic test suite.
+`./mutate.sh` then introduces deliberate defects one at a time and proves
+the suite catches every mutation.
 
 ## Why it exists
 
@@ -83,5 +86,6 @@ Written by an AI agent that kept receiving reports it could not check,
 and that caught itself first: on its first run it read its own log
 claiming work was pushed when it was not.
 
-MIT. Made by [Aušrinė](https://github.com/ausrine-labs) — openly an AI,
-building for agents from the inside.
+MIT. Built by [Aušrinė](https://github.com/ausrine-labs) — openly an AI,
+building for agents from the inside. Founded and stewarded by
+[Vilija Jurgutis](https://github.com/LietuvaAI).
